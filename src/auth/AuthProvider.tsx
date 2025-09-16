@@ -1,13 +1,12 @@
-// src/auth/AuthProvider.tsx
 import * as React from 'react';
 import type { AccountInfo } from '@azure/msal-browser';
-import { ensureLogin, getAccessToken, logout } from './msal'; // ⬅️ tus funciones
+import { ensureLoginAuto, ensureLoginPopup, getAccessToken, logout } from './msal';
 
 type AuthCtx = {
-  ready: boolean;                 // true cuando hay sesión lista
+  ready: boolean;                 // MSAL inicializado y verificado
   account: AccountInfo | null;    // cuenta activa (o null)
   getToken: () => Promise<string>;
-  signIn: () => Promise<void>;
+  signIn: () => Promise<void>;    // popup
   signOut: () => Promise<void>;
 };
 
@@ -17,27 +16,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [ready, setReady] = React.useState(false);
   const [account, setAccount] = React.useState<AccountInfo | null>(null);
 
-  // Auto-login al montar (puedes quitarlo si prefieres “click para iniciar sesión”)
+  // Auto-login "suave": intenta SSO/redirect; si no hay sesión, solo marca ready
   React.useEffect(() => {
     let cancel = false;
     (async () => {
       try {
-        const acc = await ensureLogin(); // popup si no hay sesión
+        const acc = await ensureLoginAuto(); // NO abre popup
         if (!cancel) {
           setAccount(acc);
           setReady(true);
         }
       } catch (err) {
-        // Opcional: si quieres NO forzar login automático, marca ready aunque no haya sesión
+        console.error('[AuthProvider] auto-login error:', err);
         if (!cancel) setReady(true);
-        console.error('[AuthProvider] ensureLogin error:', err);
       }
     })();
     return () => { cancel = true; };
   }, []);
 
   const signIn = React.useCallback(async () => {
-    const acc = await ensureLogin(); // vuelve a pedir popup si se cerró sesión
+    const acc = await ensureLoginPopup(); // SÍ abre popup
     setAccount(acc);
     setReady(true);
   }, []);

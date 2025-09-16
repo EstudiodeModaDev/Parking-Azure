@@ -15,11 +15,12 @@ import PicoPlacaAdmin from './Components/PicoPlaca/PicoPlaca';
 
 import type { GetAllOpts } from './Models/Commons';
 
-// ⬇️ Contexto Graph y UserService (Graph)
+// Auth + Graph context + UserService
+import { useAuth } from './auth/AuthProvider';
 import { GraphServicesProvider, useGraphServices } from './graph/GraphServicesContext';
 import { UserService } from './Services/User.Service';
 
-// ------------------ Tipos/constantes UI ------------------
+// ------------------ Constantes UI ------------------
 const NAVS_ADMIN = [
   { key: 'misreservas', label: 'Reservas' },
   { key: 'celdas', label: 'Celdas' },
@@ -83,7 +84,7 @@ function useRoleHelpers() {
   return { changeUser, isUserPermitted };
 }
 
-// ------------------ App interna (usa el contexto) ------------------
+// ------------------ App interna (requiere sesión) ------------------
 function AppInner() {
   const [selected, setSelected] = useState<NavKey>('misreservas');
   const [user, setUser] = useState<User>(null);
@@ -92,8 +93,10 @@ function AppInner() {
   const [changingRole, setChangingRole] = useState(false);
   const [canChangeRole, setCanChangeRole] = useState(false);
 
-  const { graph, shared } = useGraphServices(); // ⬅️ shared inyectado desde el provider
+  const settingsPort = useMemo(() => makeSettingsPortSingle(), []);
+  const { graph, shared } = useGraphServices();
   const userSvc = useMemo(() => new UserService(graph), [graph]);
+  const { signOut } = useAuth();
 
   const { changeUser, isUserPermitted } = useRoleHelpers();
 
@@ -110,7 +113,7 @@ function AppInner() {
     }
   };
 
-  // Cargar perfil con UserService (Graph)
+  // Cargar perfil con Graph
   useEffect(() => {
     let cancel = false;
     setUserLoading(true);
@@ -136,7 +139,7 @@ function AppInner() {
   // Reset rol si cambia el mail
   useEffect(() => { setUserRole(null); }, [user?.mail]);
 
-  // Cargar rol usando SharedService del contexto
+  // Cargar rol (shared.getRole)
   useEffect(() => {
     const mail = user?.mail;
     if (!mail) return;
@@ -208,6 +211,12 @@ function AppInner() {
                   <div className="errorText">No se pudo cargar el usuario</div>
                 )}
               </div>
+
+              <div style={{ marginLeft: 'auto' }}>
+                <button className="btn-change-role" onClick={signOut}>
+                  Cerrar sesión
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -253,7 +262,7 @@ function AppInner() {
           {isAdmin && selected === 'admin' && (
             <div className="center">
               <h2>Administración</h2>
-              <AdminSettings port={makeSettingsPortSingle()} />
+              <AdminSettings port={settingsPort} />
             </div>
           )}
 
@@ -289,8 +298,46 @@ function AppInner() {
   );
 }
 
-// ------------------ App raíz con Provider ------------------
+// ------------------ App raíz ------------------
+// Si NO hay sesión lista, muestra pantalla con botón de login (popup).
 export default function App() {
+  const { ready, account, signIn } = useAuth();
+
+  if (!ready) {
+    return (
+      <div className="center muted" style={{ padding: 24 }}>
+        Conectando…
+      </div>
+    );
+  }
+
+  if (!account) {
+    return (
+      <div className="page">
+        <div className="section userCard">
+          <div className="userRow">
+            <div className="brand">
+              <h1>PARKING EDM</h1>
+            </div>
+          </div>
+        </div>
+
+        <main className="main">
+          <div className="center" style={{ display: 'grid', gap: 12 }}>
+            <h2>Inicia sesión para continuar</h2>
+            <button className="btn-change-role" onClick={signIn}>
+              Iniciar sesión
+            </button>
+            <small className="muted">
+              Si tu navegador bloquea la ventana emergente, habilítala para este sitio.
+            </small>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Con sesión: monta GraphServicesProvider + AppInner
   return (
     <GraphServicesProvider>
       <AppInner />
