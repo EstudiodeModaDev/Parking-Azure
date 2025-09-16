@@ -2,8 +2,8 @@ import { PublicClientApplication, InteractionRequiredAuthError, type AccountInfo
 
 export const msal = new PublicClientApplication({
   auth: {
-    clientId: '<APP_CLIENT_ID>',
-    authority: 'https://login.microsoftonline.com/<TENANT_ID>',
+    clientId: '60d9a880-0f6c-4e14-b17a-1cc06ea9ba8a',
+    authority: 'https://login.microsoftonline.com/cd48ecd9-7e15-4f4b-97d9-ec813ee42b2c',
     redirectUri: window.location.origin,
   },
   cache: { cacheLocation: 'localStorage' }, //persistir sesión

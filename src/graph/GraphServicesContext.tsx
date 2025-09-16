@@ -2,8 +2,7 @@
 import * as React from 'react';
 
 // ⚙️ Auth (usa tu hook real)
-import { useAuth } from '../auth/AuthProvider'; // asegúrate del case correcto
-
+import { useAuth } from '../auth/AuthProvider';
 // 🔗 Cliente REST para Graph
 import { GraphRest } from './GraphRest';
 
